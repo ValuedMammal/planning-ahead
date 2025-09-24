@@ -43,7 +43,7 @@ wsh(andor(pk(A),pk(B),and_v(v:pk(C),older(144))))
 ```
 
 ---
-## The "policy path" API
+## The `policy_path` API
 
 https://docs.rs/bdk_wallet/2.1.0/bdk_wallet/struct.TxBuilder.html#method.policy_path
 
@@ -333,9 +333,6 @@ Therefore the asset is the key with which we're able to produce the signature.
 A "key" is denoted by the combination of a fingerprint + derivation path (i.e. key source),
 along with the signing context in which it can sign (ECDSA, Schnorr).
 
-<!-- Note that declaring "assets" doesn't require revealing sensitive information  -->
-<!-- The "key" is denoted by the (fingerprint, derivation path), can_sign  -->
-
 ### Putting it together
 <!-- schematic flow -->
 
@@ -389,7 +386,11 @@ tr(X,{multi_a(2,A,B),and_v(v:pk(C),older(52560))})
     hint: See `best_tap_spend` <https://github.com/rust-bitcoin/rust-miniscript/blob/2ca5a35d0b5277940a3d75f4daf8f8429bb56dbd/src/descriptor/tr/mod.rs#L457>
     <!-- ans: The whole idea of the Plan construct is to find the minimum satisfaction, so in this case just the internal key is used, no tapscript -->
     <!-- `<X> OP_CHECKSIG` -->
+
+    ref: https://github.com/bitcoin/bips/blob/master/bip-0379.md
+    ref: https://bitcoin.sipa.be/miniscript/
 ---
 
-<!-- Thank you for coming to my tech talk -->
 # Discussion
+
+Thank you for coming to my tech talk
