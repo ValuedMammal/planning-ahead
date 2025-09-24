@@ -1,0 +1,11 @@
+/* @theme my-theme  */
+
+@import 'default';
+
+section {
+    font-size: 18px;
+}
+
+section.slide {
+    font-size: small;
+}
