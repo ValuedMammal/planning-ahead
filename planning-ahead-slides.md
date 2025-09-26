@@ -48,7 +48,7 @@ wsh(andor(pk(A),pk(B),and_v(v:pk(C),older(144))))
 https://docs.rs/bdk_wallet/2.1.0/bdk_wallet/struct.TxBuilder.html#method.policy_path
 
 <!-- docs.rs -->
-<img src="./policy-path-docs-light.jpg" style="width: 50%; height: 50%;" />
+![](assets/policy-path-docs-light.jpg)
 
 ---
 ### Policy (cont'd)
