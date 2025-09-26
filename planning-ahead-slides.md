@@ -336,11 +336,11 @@ along with the signing context in which it can sign (ECDSA, Schnorr).
 ### Putting it together
 <!-- schematic flow -->
 
-Descriptor + Derivation Index -> Definite Descriptor
-Definite Descriptor + Assets -> Plan
-Plan + Previous Transaction Output (UTXO) -> Input (with satisfaction weight)
-(weighted) Input + Output + Feerate -> Coin Selection -> PSBT
-PSBT + Satisfaction (cryptographic signature) -> Transaction
+Descriptor + Derivation Index -> Definite Descriptor  
+Definite Descriptor + Assets -> Plan  
+Plan + Previous Transaction Output (UTXO) -> Input (with satisfaction weight)  
+(weighted) Input + Output + Feerate -> Coin Selection -> PSBT  
+PSBT + Satisfaction (cryptographic signature) -> Transaction  
 
 <!-- Recap: What did we actually accomplish? -->
 <!-- recall the plan gives us the _minimum satisfaction_ -->
