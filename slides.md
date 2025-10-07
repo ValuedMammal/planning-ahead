@@ -25,14 +25,17 @@ backgroundColor: #FFFFFF
 ## Policy
 
 <!-- Background & Why should we care -->
-<!-- moving beyond single-sig, multi-sig -->
-<!-- encoding contingency plans at the level of Bitcoin Script -->
+<!-- def: Policy describes 1+ spending conditions -->
+<!-- Can be composed of a number of individual sub-policies -->
+<!-- Nested structure that represents an abstract syntax tree in a human readable language -->
+<!-- Why: moving beyond single-sig -->
+<!-- encoding contracts, contingency plans at the level of Bitcoin Script -->
 <!-- enables more complex contracts e.g. vaults -->
 <!-- better security, privacy -->
 <!-- Example -->
 <!-- Note that in the real world, A, B, and C will be substituted with actual keys, xpubs, etc -->
 
-This policy says: "Either A and B must sign, or C can sign after 144 blocks have passed since the UTXO was created."
+This policy says: "Both A and B must sign, or C can sign after 144 blocks have passed since the UTXO was created."
 
 ```
 or(
@@ -63,7 +66,9 @@ https://docs.rs/bdk_wallet/2.1.0/bdk_wallet/struct.TxBuilder.html#method.policy_
 
 ---
 
-<!-- If you fail to get this right... -->
+<!-- Failure to do any of the aforementioned steps -->
+<!-- will definitely result in an error that might look like this -->
+<!-- It's important to understand WHY this error occurs -->
 ![](assets/ferris.png)
 **Error: Spending policy required: External**
 ---
@@ -79,6 +84,7 @@ wsh(thresh(2,pk(A),sj:and_v(v:pk(B),n:older(6)),snj:and_v(v:pk(C),after(630000))
 <!-- Nested data structure -->
 <!-- painful UX -->
 <!-- Policy ID: checksum of the json serialized policy node item -->
+<!-- not easily reproducible depending on which keys happen to be available -->
 <!-- list of indices into the items beneath said node -->
 
 ```
@@ -332,7 +338,7 @@ wsh(thresh(2,pk(A),sj:and_v(v:pk(B),n:older(6)),snj:and_v(v:pk(C),after(630000))
 
 "A plan represents a particular spending path on a descriptor. It contains the witness template and
 the timelocks needed for satisfying the plan. Calling `plan` on a descriptor will return this
-structure, containing the cheapest spending path possible considering the assets given."
+structure containing the cheapest spending path possible considering the assets given."
 
 <https://docs.rs/miniscript/12.3.5/miniscript/plan/struct.Plan.html>
 
@@ -340,13 +346,12 @@ structure, containing the cheapest spending path possible considering the assets
 The plan finds the minimum satisfaction out of a set of satisfiable conditions.
 This has a few benefits:
 
-a) Preserves privacy by not revealing every possible condition
-b) Saves on-chain fees
+* Preserves privacy by not revealing every possible condition
+* Saves on-chain fees
 
 #### How:
-"...calling `plan` on a descriptor... considering the assets given."  
-
-#### But wait... assets?
+* "...calling `plan` on a descriptor... considering the assets given."
+* But wait... **assets?**
 
 ---
 ### Primer on `Assets`
@@ -354,16 +359,18 @@ b) Saves on-chain fees
 - **def**: Information that we bring to the transaction indicating the conditions we intend to satisfy.
 - **example**: A single-sig transaction has a single satisfiable condition, i.e. the signature.
     Therefore the asset is the key with which we're able to produce the signature.
-- **Kinds of assets** include keys, hash (pre)images, and timelocks
 - **Note: The assets consist of public information.**
     A "key" is denoted by the combination of a fingerprint + derivation path (i.e. key source),
-    along with the signing context in which it can sign (ECDSA, Schnorr).
+    along with the context in which it can sign (ECDSA, Schnorr).
+- **Kinds of assets** include keys, hash locks, and timelocks
 
+<!-- Directly analogous to the policy path, but more explicit -->
 <!-- A note on terminology: Condition vs Satisfaction -->
 <!-- H(preimage) -> hash -->
 
-### Putting it together
+### UX
 <!-- schematic flow -->
+<!-- intuition, mental model -->
 
 Descriptor + Derivation Index -> **Definite Descriptor**  
 Definite Descriptor + Assets -> **Plan**  
@@ -371,10 +378,26 @@ Plan + UTXO -> **Input** (+ satisfaction weight)
 Input + Output + Feerate -> Coin Selection -> **PSBT**  
 PSBT + Satisfaction (cryptographic signature) -> **Transaction**  
 
+---
+### Putting it together
+
 <!-- Recap: In the end what did we accomplish? -->
-<!-- recall the plan gives us the *minimum satisfaction* -->
-<!-- without this, we'd be forced to rely on something like "max weight to satisfy" -->
-<!-- this could be incredibly wasteful if a single uncommon path requires a large satisfaction -->
+1. The plan gives us the **minimum satisfaction**.
+    Without this, we'd be forced to rely on something like the "max weight to satisfy",
+    which could become wasteful if a single uncommon path requires a large satisfaction.
+2. The **satisfaction weight** enables more efficient coin selection.
+3. Plan lets us **update the PSBT** with the pertinent information without revealing too much.
+    This is a prerequisite to signing.
+4. **Finalizer** uses plans to construct the final scriptsig/witness.
+    This is a prerequisite to extraction.
+
+### New APIs
+<!-- For single-sig everything should Just Work -->
+- `PsbtParams::add_assets`
+- `Wallet::create_psbt`
+- `Finalizer::finalize_psbt`
+
+See the code: <https://github.com/bitcoindevkit/bdk_wallet/pull/297>
 
 ---
 ## Example inheritance plan
@@ -390,14 +413,14 @@ tr(X,{multi_a(2,A,B),and_v(v:pk(C),older(52560))})
 ```
 
 #### Assets
-pk (internal): `X`  
-pk: `A`, `B`, `C`  
-older: `52560` blocks
+- pk (internal): `X`
+- pk: `A`, `B`, `C` 
+- `older`: 52560 blocks
 
 ---
 <!-- _class: slide_medium -->
 
-# Concept check Qs
+## Concept check Qs
 
 For each set of assets, what is the chosen spend path, and what is the resulting tapscript?
 
@@ -410,13 +433,13 @@ tr(X,{multi_a(2,A,B),and_v(v:pk(C),older(52560))})
 ```
 
 * Keys: `[A, B]`
-* multi_a: `<A> OP_CHECKSIG <B> OP_CHECKSIGADD OP_PUSHNUM_2 OP_NUMEQUAL`
+* ans: (multi_a) `<A> OP_CHECKSIG <B> OP_CHECKSIGADD OP_PUSHNUM_2 OP_NUMEQUAL`
 * Key: `A`
-* Err: The assets are insufficient
+* ans: (error) The assets are insufficient.
 * Key: `C` + `older(52560)` blocks
-* and_v: `<C> OP_CHECKSIGVERIFY <50cd00> OP_CHECKSEQUENCEVERIFY`
-* Say we add all of the assets indiscriminately: `X` + `[A, B, C]` + `older(52560)`
-* `<X> OP_CHECKSIG`
+* ans: (and_v) `<C> OP_CHECKSIGVERIFY <50cd00> OP_CHECKSEQUENCEVERIFY`
+* bonus: Say we add all of the assets indiscriminately: `X` + `[A, B, C]` + `older(52560)`
+* ans (key spend): `<X> OP_CHECKSIG`
 
 <!-- Answers -->
 <!-- 1. multi_a `<A> OP_CHECKSIG <B> OP_CHECKSIGADD OP_PUSHNUM_2 OP_NUMEQUAL` -->
@@ -427,6 +450,6 @@ tr(X,{multi_a(2,A,B),and_v(v:pk(C),older(52560))})
 
 ---
 
-# Discussion
+## Discussion
 
 <!-- Thank you for coming to my tech talk -->
