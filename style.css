@@ -6,6 +6,10 @@ section {
     font-size: 18px;
 }
 
-section.slide {
-    font-size: small;
+section.slide_medium {
+    font-size: 16px;
+}
+
+section.slide_small {
+    font-size: 14px;
 }
